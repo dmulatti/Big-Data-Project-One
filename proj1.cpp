@@ -40,7 +40,17 @@ uint32_t hash2(uint16_t first, uint16_t second) {
 
 }
 
-void PCY_basic(const vector<vector<uint16_t>>& data) {
+vector<bool> counts_to_frequent_bitmap(const vector<uint32_t>& counts, unsigned support_threshold) {
+	vector<bool> freq(counts.size(), false);
+	for(unsigned i = 0; i < counts.size(); ++i) {
+		if(counts[i] >= support_threshold) {
+			freq[i].flip();
+		}
+	}
+	return freq;
+}
+
+void PCY_basic(const vector<vector<uint16_t>>& data, unsigned support_threshold) {
 	vector<uint32_t> item_counts(16500, 0);
 	vector<uint32_t> pair_counts(0x00ffffff, 0);
 	
@@ -54,6 +64,19 @@ void PCY_basic(const vector<vector<uint16_t>>& data) {
 			}
 		}
 	}
+	
+	// The bool vector is implemented as a bitset
+	vector<bool> frequent_items = counts_to_frequent_bitmap(item_counts, support_threshold);
+	item_counts.resize(0); // deallocations memory used by vector
+	vector<bool> frequent_pairs = counts_to_frequent_bitmap(pair_counts, support_threshold);
+	pair_counts.resize(0);
+
+	for(unsigned i = 0; i < frequent_items.size(); ++i) {
+		if(frequent_items[i]) {
+			cout << i << ' ';
+		}
+	}
+			
 }
 
 vector<vector<uint16_t>> read_baskets_from_file(string filename) {
@@ -71,4 +94,5 @@ vector<vector<uint16_t>> read_baskets_from_file(string filename) {
 
 int main(){
 	vector<vector<uint16_t>> data = read_baskets_from_file("retail.txt");
+	PCY_basic(data, 1000);
 }
