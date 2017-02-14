@@ -1,3 +1,4 @@
+#include <chrono>
 #include <algorithm>
 #include <iostream>
 #include <fstream>
@@ -50,7 +51,7 @@ vector<bool> counts_to_frequent_bitmap(const vector<uint32_t>& counts, unsigned 
 	return freq;
 }
 
-void PCY_basic(const vector<vector<uint16_t>>& data, unsigned support_threshold) {
+void PCY_basic(const vector<vector<uint16_t>>& data, double support_percentage, double file_percentage) {
 	vector<uint32_t> item_counts(16500, 0);
 	vector<uint32_t> pair_counts(0x00ffffff, 0);
 	
@@ -66,17 +67,12 @@ void PCY_basic(const vector<vector<uint16_t>>& data, unsigned support_threshold)
 	}
 	
 	// The bool vector is implemented as a bitset
-	vector<bool> frequent_items = counts_to_frequent_bitmap(item_counts, support_threshold);
+	vector<bool> frequent_items = counts_to_frequent_bitmap(item_counts, data.size()*support_percentage);
 	item_counts.resize(0); // deallocations memory used by vector
-	vector<bool> frequent_pairs = counts_to_frequent_bitmap(pair_counts, support_threshold);
+	vector<bool> frequent_pairs = counts_to_frequent_bitmap(pair_counts, data.size()*support_percentage);
 	pair_counts.resize(0);
 
-	for(unsigned i = 0; i < frequent_items.size(); ++i) {
-		if(frequent_items[i]) {
-			cout << i << ' ';
-		}
-	}
-			
+		
 }
 
 vector<vector<uint16_t>> read_baskets_from_file(string filename) {
@@ -92,7 +88,15 @@ vector<vector<uint16_t>> read_baskets_from_file(string filename) {
 	return data;	
 }
 
+int64_t benchmark(void (*func)(const vector<vector<uint16_t>>&, double, double),
+					const vector<vector<uint16_t>>& data, double support, double file_percentage) {
+	auto start = chrono::high_resolution_clock::now();
+	func(data, support, file_percentage);
+	auto end = chrono::high_resolution_clock::now();
+	return chrono::duration_cast<chrono::milliseconds>(end - start).count();
+}
+
 int main(){
 	vector<vector<uint16_t>> data = read_baskets_from_file("retail.txt");
-	PCY_basic(data, 1000);
+	cout << benchmark(&PCY_basic, data, 0.1, 0.1) << endl;
 }
