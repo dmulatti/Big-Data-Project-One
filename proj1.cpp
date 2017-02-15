@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
-#include <iterator>
+#include <unordered_map>
 
 using namespace std;
 
@@ -27,7 +27,7 @@ uint32_t hash1(uint16_t first, uint16_t second) {
 
 uint32_t hash2(uint16_t first, uint16_t second) {
 	constexpr uint32_t FNV_prime = 16777619;
-        constexpr uint32_t FNV_offset_basis = 2166136261;
+    constexpr uint32_t FNV_offset_basis = 2166136261;
 	uint32_t hash = FNV_offset_basis;
 	hash *= FNV_prime;
 	hash ^= (first & 0x00ff);
@@ -45,7 +45,7 @@ vector<bool> counts_to_frequent_bitmap(const vector<uint32_t>& counts, unsigned 
 	vector<bool> freq(counts.size(), false);
 	for(unsigned i = 0; i < counts.size(); ++i) {
 		if(counts[i] >= support_threshold) {
-			freq[i].flip();
+			freq[i] = true;
 		}
 	}
 	return freq;
@@ -67,12 +67,28 @@ void PCY_basic(const vector<vector<uint16_t>>& data, double support_percentage, 
 	}
 	
 	// The bool vector is implemented as a bitset
-	vector<bool> frequent_items = counts_to_frequent_bitmap(item_counts, data.size()*support_percentage);
+	vector<bool> frequent_items = counts_to_frequent_bitmap(item_counts, (double)data.size()*support_percentage);
 	item_counts.resize(0); // deallocations memory used by vector
-	vector<bool> frequent_pairs = counts_to_frequent_bitmap(pair_counts, data.size()*support_percentage);
+	vector<bool> frequent_pairs = counts_to_frequent_bitmap(pair_counts, (double)data.size()*support_percentage);
 	pair_counts.resize(0);
 
-		
+	unordered_map<uint32_t, uint32_t> candidate_pairs;
+
+	for(const auto& v : data) {
+		for(unsigned i = 0; i < v.size() && frequent_items[v[i]]; ++i) {
+			for(unsigned j = i + 1; j < v.size(); ++j) {
+				if(frequent_items[v[j]] && frequent_pairs[hash1(v[i], v[j]) & 0x00ffffff]) {
+						candidate_pairs[(((uint32_t)v[i] << 16) | v[j])] += 1;
+				}
+			}
+		}
+	}
+
+	for(const auto& p : candidate_pairs) {
+		if((double)p.second/data.size() > support_percentage) {
+			cout << '(' << (p.first >> 16) << ", " << (p.first & 0xffff) << ")\n";
+		}
+	}
 }
 
 vector<vector<uint16_t>> read_baskets_from_file(string filename) {
