@@ -68,8 +68,6 @@ void PCY_basic(const vector<vector<uint16_t>>& data, double support_percentage, 
 	vector<uint32_t> item_counts(16500, 0);
 	vector<uint32_t> pair_counts(0x00ffffff, 0);
 
-	print_current_memory_usage("PCY_basic after counter allocation: ");
-
 	for(unsigned k = 0; k < data.size()*file_percentage; ++k) {
 		for(const auto& i : data[k]) {
 			++item_counts[i];
@@ -86,8 +84,6 @@ void PCY_basic(const vector<vector<uint16_t>>& data, double support_percentage, 
 	item_counts.resize(0); // deallocations memory used by vector
 	vector<bool> frequent_pairs = counts_to_frequent_bitmap(pair_counts, (double)data.size()*support_percentage);
 	pair_counts.resize(0);
-
-	print_current_memory_usage("PCY_basic after resizings: ");
 
 	unordered_map<uint32_t, uint32_t> candidate_pairs;
 
@@ -148,9 +144,6 @@ void apriori(const vector<vector<uint16_t>>& data, double support_percentage, do
 		if (pair.second >= threshold)
 			cout << '(' << (pair.first >> 16) << ", " << (pair.first & 0xffff) << ")\n";
 	}
-
-
-
 }
 
 vector<vector<uint16_t>> read_baskets_from_file(string filename) {
@@ -174,8 +167,11 @@ int64_t benchmark(void (*func)(const vector<vector<uint16_t>>&, double, double),
 	return chrono::duration_cast<chrono::nanoseconds>(end - start).count();
 }
 
-int main(){
-	vector<vector<uint16_t>> data = read_baskets_from_file("retail.txt");
+int main(int argc, char * argv[]){
+	if(argc != 2) {
+		cout << "Usage: program [filename]\n";
+	}
+	vector<vector<uint16_t>> data = read_baskets_from_file(argv[1]);
 	cout << benchmark(&PCY_basic, data, 0.1, 1) << endl;
 	print_current_memory_usage("After PCY ");
 	cout << benchmark(&apriori, data, 0.1, 1) << endl;
