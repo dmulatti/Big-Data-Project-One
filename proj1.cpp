@@ -125,7 +125,8 @@ void PCY_basic(const vector<vector<uint16_t>> &data, const double support_percen
 void PCY_multihash(const vector<vector<uint16_t>> &data, const double support_percentage, const double file_percentage)
 {
     vector<uint32_t> item_counts(16500, 0);
-    vector<uint32_t> pair_counts(data.size() * file_percentage * 4, 0);
+    vector<uint32_t> pair_counts_1(data.size() * file_percentage * 2, 0);
+	vector<uint32_t> pair_counts_2(data.size() * file_percentage * 2, 0);
 
     for (unsigned k = 0; k < data.size() * file_percentage; ++k)
     {
@@ -137,7 +138,8 @@ void PCY_multihash(const vector<vector<uint16_t>> &data, const double support_pe
 		{
 			for (unsigned j = i + 1; j < data[k].size(); ++j)
 			{
-				++pair_counts[hash1(data[k][i], data[k][j]) & pair_counts.size()];
+				++pair_counts_1[hash1(data[k][i], data[k][j]) % pair_counts_1.size()];
+				++pair_counts_2[hash2(data[k][i], data[k][j]) % pair_counts_2.size()];
 			}
 		}
     }
@@ -145,8 +147,10 @@ void PCY_multihash(const vector<vector<uint16_t>> &data, const double support_pe
     // The bool vector is implemented as a bitset
     const vector<bool> frequent_items = counts_to_frequent_bitmap(item_counts, data.size() * support_percentage);
     item_counts.resize(0); // deallocations memory used by vector
-    const vector<bool> frequent_pairs = counts_to_frequent_bitmap(pair_counts, data.size() * support_percentage);
-    pair_counts.resize(0);
+    const vector<bool> frequent_pairs_1 = counts_to_frequent_bitmap(pair_counts_1, data.size() * support_percentage);
+    pair_counts_1.resize(0);
+	const vector<bool> frequent_pairs_2 = counts_to_frequent_bitmap(pair_counts_2, data.size() * support_percentage);
+    pair_counts_2.resize(0);
 
     unordered_map<uint32_t, uint32_t> candidate_pairs;
 
@@ -156,7 +160,9 @@ void PCY_multihash(const vector<vector<uint16_t>> &data, const double support_pe
 		{
 			for (unsigned j = i + 1; j < data[k].size(); ++j)
 			{
-				if (frequent_items[data[k][j]] && frequent_pairs[hash1(data[k][i], data[k][j]) & frequent_pairs.size()])
+				if (frequent_items[data[k][j]] 
+					&& frequent_pairs_1[hash1(data[k][i], data[k][j]) % frequent_pairs_1.size()] 
+					&& frequent_pairs_2[hash2(data[k][i], data[k][j]) % frequent_pairs_2.size()])
 				{
 					candidate_pairs[pair_16s_to_32(data[k][i], data[k][j])] += 1;
 				}
@@ -253,9 +259,12 @@ int main(int argc, char *argv[])
 		cout << "Usage: " << argv[0] << " [filename]\n";
 		return 1;
     }
-    vector<vector<uint16_t>> data = read_baskets_from_file(argv[1]);
-    cout << benchmark(&PCY_basic, data, 0.1, 1) << endl;
-    cout << get_current_memory_usage() << endl;
-    cout << benchmark(&apriori, data, 0.1, 1) << endl;
-    cout << get_current_memory_usage() << endl;
+    
+	vector<vector<uint16_t>> data = read_baskets_from_file(argv[1]);
+	double support_threshold = 0.05;
+	double file_percentage = 1;
+
+    cout << "PCY_basic: " << benchmark(&PCY_basic, data, support_threshold, file_percentage) << endl;
+    cout << "apriori: " << benchmark(&apriori, data, support_threshold, file_percentage) << endl;
+	cout << "PCY_multihash: " << benchmark(&PCY_multihash, data, support_threshold, file_percentage) << endl;
 }
