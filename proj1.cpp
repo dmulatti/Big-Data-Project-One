@@ -1,4 +1,4 @@
-#include<mach/mach.h>
+#include <mach/mach.h>
 #include <chrono>
 #include <algorithm>
 #include <iostream>
@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <iterator>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -19,7 +20,7 @@ void print_current_memory_usage(string s) {
 	cout << "Memory usage at " << s << t_info.resident_size << endl;
 }
 
-uint32_t hash1(uint16_t first, uint16_t second) {
+inline uint32_t hash1(uint16_t first, uint16_t second) {
 	constexpr uint32_t FNV_prime = 16777619;
 	constexpr uint32_t FNV_offset_basis = 2166136261;
 	uint32_t hash = FNV_offset_basis;
@@ -34,7 +35,7 @@ uint32_t hash1(uint16_t first, uint16_t second) {
 	return hash;
 }
 
-uint32_t hash2(uint16_t first, uint16_t second) {
+inline uint32_t hash2(uint16_t first, uint16_t second) {
 	constexpr uint32_t FNV_prime = 16777619;
     constexpr uint32_t FNV_offset_basis = 2166136261;
 	uint32_t hash = FNV_offset_basis;
@@ -50,11 +51,11 @@ uint32_t hash2(uint16_t first, uint16_t second) {
 
 }
 
-uint32_t pair_16s_to_32(uint16_t a, uint16_t b) {
+inline uint32_t pair_16s_to_32(uint16_t a, uint16_t b) {
 	return ((uint32_t)a << 16) | b;
 }
 
-vector<bool> counts_to_frequent_bitmap(const vector<uint32_t>& counts, unsigned support_threshold) {
+inline vector<bool> counts_to_frequent_bitmap(const vector<uint32_t>& counts, unsigned support_threshold) {
 	vector<bool> freq(counts.size(), false);
 	for(unsigned i = 0; i < counts.size(); ++i) {
 		if(counts[i] >= support_threshold) {
@@ -66,7 +67,7 @@ vector<bool> counts_to_frequent_bitmap(const vector<uint32_t>& counts, unsigned 
 
 void PCY_basic(const vector<vector<uint16_t>>& data, double support_percentage, double file_percentage) {
 	vector<uint32_t> item_counts(16500, 0);
-	vector<uint32_t> pair_counts(0x00ffffff, 0);
+	vector<uint32_t> pair_counts(data.size()*file_percentage*4, 0);
 
 	for(unsigned k = 0; k < data.size()*file_percentage; ++k) {
 		for(const auto& i : data[k]) {
@@ -80,9 +81,9 @@ void PCY_basic(const vector<vector<uint16_t>>& data, double support_percentage, 
 	}
 
 	// The bool vector is implemented as a bitset
-	vector<bool> frequent_items = counts_to_frequent_bitmap(item_counts, (double)data.size()*support_percentage);
+	vector<bool> frequent_items = counts_to_frequent_bitmap(item_counts, data.size()*support_percentage);
 	item_counts.resize(0); // deallocations memory used by vector
-	vector<bool> frequent_pairs = counts_to_frequent_bitmap(pair_counts, (double)data.size()*support_percentage);
+	vector<bool> frequent_pairs = counts_to_frequent_bitmap(pair_counts, data.size()*support_percentage);
 	pair_counts.resize(0);
 
 	unordered_map<uint32_t, uint32_t> candidate_pairs;
@@ -98,8 +99,8 @@ void PCY_basic(const vector<vector<uint16_t>>& data, double support_percentage, 
 	}
 
 	for(const auto& p : candidate_pairs) {
-		if((double)p.second/data.size() > support_percentage) {
-			cout << '(' << (p.first >> 16) << ", " << (p.first & 0xffff) << ")\n";
+		if((double)p.second/data.size() >= support_percentage) {
+			cout << (p.first >> 16) << ' ' << (p.first & 0xffff) << '\n';
 		}
 	}
 }
@@ -124,9 +125,6 @@ void apriori(const vector<vector<uint16_t>>& data, double support_percentage, do
 		}
 	}
 
-	cout << "baskets: " << baskets_to_process << '\n';
-	cout << "threshold: " << threshold << '\n';
-
 	unordered_map<uint32_t, uint32_t> frequent_pairs;
 
 	for (unsigned i = 0; i<baskets_to_process; ++i) {
@@ -142,7 +140,7 @@ void apriori(const vector<vector<uint16_t>>& data, double support_percentage, do
 
 	for (auto const& pair : frequent_pairs) {
 		if (pair.second >= threshold)
-			cout << '(' << (pair.first >> 16) << ", " << (pair.first & 0xffff) << ")\n";
+			cout  << (pair.first >> 16) << ' ' << (pair.first & 0xffff) << '\n';
 	}
 }
 
@@ -164,7 +162,7 @@ int64_t benchmark(void (*func)(const vector<vector<uint16_t>>&, double, double),
 	auto start = chrono::high_resolution_clock::now();
 	func(data, support, file_percentage);
 	auto end = chrono::high_resolution_clock::now();
-	return chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+	return chrono::duration_cast<chrono::milliseconds>(end - start).count();
 }
 
 int main(int argc, char * argv[]){
@@ -174,6 +172,6 @@ int main(int argc, char * argv[]){
 	vector<vector<uint16_t>> data = read_baskets_from_file(argv[1]);
 	cout << benchmark(&PCY_basic, data, 0.1, 1) << endl;
 	print_current_memory_usage("After PCY ");
-	cout << benchmark(&apriori, data, 0.1, 1) << endl;
+	cout <<  benchmark(&apriori, data, 0.1, 1) << endl;
 	print_current_memory_usage("After apriori ");
 }
