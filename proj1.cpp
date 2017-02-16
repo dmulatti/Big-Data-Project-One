@@ -7,6 +7,7 @@
 #include <vector>
 #include <cstdint>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace std;
 
@@ -58,7 +59,7 @@ vector<bool> counts_to_frequent_bitmap(const vector<uint32_t>& counts, unsigned 
 void PCY_basic(const vector<vector<uint16_t>>& data, double support_percentage, double file_percentage) {
 	vector<uint32_t> item_counts(16500, 0);
 	vector<uint32_t> pair_counts(0x00ffffff, 0);
-	
+
 	for(const auto& v : data) {
 		for(const auto& i : v) {
 			++item_counts[i];
@@ -69,12 +70,12 @@ void PCY_basic(const vector<vector<uint16_t>>& data, double support_percentage, 
 			}
 		}
 	}
-	
+
 	// The bool vector is implemented as a bitset
 	vector<bool> frequent_items = counts_to_frequent_bitmap(item_counts, (double)data.size()*support_percentage);
-	item_counts.resize(0); // deallocations memory used by vector
+	//item_counts.resize(0); // deallocations memory used by vector
 	vector<bool> frequent_pairs = counts_to_frequent_bitmap(pair_counts, (double)data.size()*support_percentage);
-	pair_counts.resize(0);
+	//pair_counts.resize(0);
 
 	unordered_map<uint32_t, uint32_t> candidate_pairs;
 
@@ -95,6 +96,51 @@ void PCY_basic(const vector<vector<uint16_t>>& data, double support_percentage, 
 	}
 }
 
+void apriori(const vector<vector<uint16_t>>& data, double support_percentage, double file_percentage) {
+	unsigned baskets_to_process = file_percentage * data.size();
+	unsigned threshold = support_percentage * baskets_to_process;
+
+	unordered_map<unsigned, unsigned> product_counts;
+
+	for (unsigned i=0; i < baskets_to_process; ++i) {
+		for(auto const& product : data[i]) {
+			++product_counts[product];
+		}
+	}
+
+	unordered_set<unsigned> frequent_items;
+
+	for (auto const& count : product_counts){
+		if (count.second >= threshold){
+			frequent_items.insert(count.first);
+		}
+	}
+
+	cout << "baskets: " << baskets_to_process << '\n';
+	cout << "threshold: " << threshold << '\n';
+
+	unordered_map<uint32_t, uint32_t> frequent_pairs;
+
+	for (unsigned i = 0; i<baskets_to_process; ++i) {
+		auto basket = data[i];
+		for (unsigned j = 0; frequent_items.count(basket[j]) && j < basket.size(); ++j) {
+			for (unsigned k = j+1; k < basket.size(); ++k){
+				if (frequent_items.count(basket[k])) {
+					++frequent_pairs[(pair_16s_to_32(basket[j], basket[k]))];
+				}
+			}
+		}
+	}
+
+	for (auto const& pair : frequent_pairs) {
+		if (pair.second >= threshold)
+			cout << '(' << (pair.first >> 16) << ", " << (pair.first & 0xffff) << ")\n";
+	}
+
+
+
+}
+
 vector<vector<uint16_t>> read_baskets_from_file(string filename) {
 	vector<vector<uint16_t>> data;
 	string buf;
@@ -105,7 +151,7 @@ vector<vector<uint16_t>> read_baskets_from_file(string filename) {
 						istream_iterator<uint16_t>()));
 		sort(data.back().begin(), data.back().end());
 	}
-	return data;	
+	return data;
 }
 
 int64_t benchmark(void (*func)(const vector<vector<uint16_t>>&, double, double),
@@ -113,10 +159,11 @@ int64_t benchmark(void (*func)(const vector<vector<uint16_t>>&, double, double),
 	auto start = chrono::high_resolution_clock::now();
 	func(data, support, file_percentage);
 	auto end = chrono::high_resolution_clock::now();
-	return chrono::duration_cast<chrono::milliseconds>(end - start).count();
+	return chrono::duration_cast<chrono::nanoseconds>(end - start).count();
 }
 
 int main(){
 	vector<vector<uint16_t>> data = read_baskets_from_file("retail.txt");
-	cout << benchmark(&PCY_basic, data, 0.1, 0.1) << endl;
+	cout << benchmark(&PCY_basic, data, 0.01, 1) << endl;
+	cout << benchmark(&apriori, data, 0.01, 1) << endl;
 }
