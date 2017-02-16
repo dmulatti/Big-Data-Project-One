@@ -13,12 +13,12 @@
 
 using namespace std;
 
-void print_current_memory_usage(string s)
+uint64_t get_current_memory_usage()
 {
     struct task_basic_info t_info;
     mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
     task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t)&t_info, &t_info_count);
-    cout << "Memory usage at " << s << t_info.resident_size << endl;
+    return t_info.resident_size;
 }
 
 inline uint32_t hash1(uint16_t first, uint16_t second)
@@ -63,10 +63,10 @@ inline vector<bool> counts_to_frequent_bitmap(const vector<uint32_t> &counts, un
     vector<bool> freq(counts.size(), false);
     for (unsigned i = 0; i < counts.size(); ++i)
     {
-	if (counts[i] >= support_threshold)
-	{
-	    freq[i] = true;
-	}
+		if (counts[i] >= support_threshold)
+		{
+	    	freq[i] = true;
+		}
     }
     return freq;
 }
@@ -78,17 +78,17 @@ void PCY_basic(const vector<vector<uint16_t>> &data, double support_percentage, 
 
     for (unsigned k = 0; k < data.size() * file_percentage; ++k)
     {
-	for (const auto &i : data[k])
-	{
-	    ++item_counts[i];
-	}
-	for (unsigned i = 0; i < data[k].size(); ++i)
-	{
-	    for (unsigned j = i + 1; j < data[k].size(); ++j)
-	    {
-		++pair_counts[hash1(data[k][i], data[k][j]) & pair_counts.size()];
-	    }
-	}
+		for (const auto &i : data[k])
+		{
+			++item_counts[i];
+		}
+		for (unsigned i = 0; i < data[k].size(); ++i)
+		{
+			for (unsigned j = i + 1; j < data[k].size(); ++j)
+			{
+			++pair_counts[hash1(data[k][i], data[k][j]) & pair_counts.size()];
+			}
+		}
     }
 
     // The bool vector is implemented as a bitset
@@ -101,24 +101,24 @@ void PCY_basic(const vector<vector<uint16_t>> &data, double support_percentage, 
 
     for (unsigned k = 0; k < data.size() * file_percentage; ++k)
     {
-	for (unsigned i = 0; i < data[k].size() && frequent_items[data[k][i]]; ++i)
-	{
-	    for (unsigned j = i + 1; j < data[k].size(); ++j)
-	    {
-		if (frequent_items[data[k][j]] && frequent_pairs[hash1(data[k][i], data[k][j]) & frequent_pairs.size()])
+		for (unsigned i = 0; i < data[k].size() && frequent_items[data[k][i]]; ++i)
 		{
-		    candidate_pairs[pair_16s_to_32(data[k][i], data[k][j])] += 1;
+			for (unsigned j = i + 1; j < data[k].size(); ++j)
+			{
+				if (frequent_items[data[k][j]] && frequent_pairs[hash1(data[k][i], data[k][j]) & frequent_pairs.size()])
+				{
+					candidate_pairs[pair_16s_to_32(data[k][i], data[k][j])] += 1;
+				}
+			}
 		}
-	    }
-	}
     }
 
     for (const auto &p : candidate_pairs)
     {
-	if ((double)p.second / data.size() >= support_percentage)
-	{
-	    cout << (p.first >> 16) << ' ' << (p.first & 0xffff) << '\n';
-	}
+		if ((double)p.second / data.size() >= support_percentage)
+		{
+			cout << (p.first >> 16) << ' ' << (p.first & 0xffff) << '\n';
+		}
     }
 }
 
@@ -131,43 +131,43 @@ void apriori(const vector<vector<uint16_t>> &data, double support_percentage, do
 
     for (unsigned i = 0; i < baskets_to_process; ++i)
     {
-	for (auto const &product : data[i])
-	{
-	    ++product_counts[product];
-	}
+		for (auto const &product : data[i])
+		{
+			++product_counts[product];
+		}
     }
 
     unordered_set<unsigned> frequent_items;
 
     for (auto const &count : product_counts)
     {
-	if (count.second >= threshold)
-	{
-	    frequent_items.insert(count.first);
-	}
+		if (count.second >= threshold)
+		{
+			frequent_items.insert(count.first);
+		}
     }
 
     unordered_map<uint32_t, uint32_t> frequent_pairs;
 
     for (unsigned i = 0; i < baskets_to_process; ++i)
     {
-	auto basket = data[i];
-	for (unsigned j = 0; frequent_items.count(basket[j]) && j < basket.size(); ++j)
-	{
-	    for (unsigned k = j + 1; k < basket.size(); ++k)
-	    {
-		if (frequent_items.count(basket[k]))
+		auto basket = data[i];
+		for (unsigned j = 0; frequent_items.count(basket[j]) && j < basket.size(); ++j)
 		{
-		    ++frequent_pairs[(pair_16s_to_32(basket[j], basket[k]))];
+			for (unsigned k = j + 1; k < basket.size(); ++k)
+			{
+				if (frequent_items.count(basket[k]))
+				{
+					++frequent_pairs[(pair_16s_to_32(basket[j], basket[k]))];
+				}
+			}
 		}
-	    }
-	}
     }
 
     for (auto const &pair : frequent_pairs)
     {
-	if (pair.second >= threshold)
-	    cout << (pair.first >> 16) << ' ' << (pair.first & 0xffff) << '\n';
+		if (pair.second >= threshold)
+			cout << (pair.first >> 16) << ' ' << (pair.first & 0xffff) << '\n';
     }
 }
 
@@ -178,10 +178,10 @@ vector<vector<uint16_t>> read_baskets_from_file(string filename)
     ifstream fin(filename, istream::in);
     while (getline(fin, buf))
     {
-	istringstream line(buf);
-	data.push_back(vector<uint16_t>((istream_iterator<uint16_t>(line)),
-					istream_iterator<uint16_t>()));
-	sort(data.back().begin(), data.back().end());
+		istringstream line(buf);
+		data.push_back(vector<uint16_t>((istream_iterator<uint16_t>(line)),
+						istream_iterator<uint16_t>()));
+		sort(data.back().begin(), data.back().end());
     }
     return data;
 }
@@ -199,11 +199,11 @@ int main(int argc, char *argv[])
 {
     if (argc != 2)
     {
-	cout << "Usage: program [filename]\n";
+		cout << "Usage: program [filename]\n";
     }
     vector<vector<uint16_t>> data = read_baskets_from_file(argv[1]);
     cout << benchmark(&PCY_basic, data, 0.1, 1) << endl;
-    print_current_memory_usage("After PCY ");
+    cout << get_current_memory_usage() << endl;
     cout << benchmark(&apriori, data, 0.1, 1) << endl;
-    print_current_memory_usage("After apriori ");
+    cout << get_current_memory_usage() << endl;
 }
