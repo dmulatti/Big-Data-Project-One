@@ -137,7 +137,7 @@ void PCY_multihash(const vector<vector<uint16_t>> &data, const double support_pe
 		{
 			for (unsigned j = i + 1; j < data[k].size(); ++j)
 			{
-			++pair_counts[hash1(data[k][i], data[k][j]) & pair_counts.size()];
+				++pair_counts[hash1(data[k][i], data[k][j]) & pair_counts.size()];
 			}
 		}
     }
