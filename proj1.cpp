@@ -66,17 +66,17 @@ vector<bool> counts_to_frequent_bitmap(const vector<uint32_t>& counts, unsigned 
 
 void PCY_basic(const vector<vector<uint16_t>>& data, double support_percentage, double file_percentage) {
 	vector<uint32_t> item_counts(16500, 0);
-	vector<uint32_t> pair_counts(0xffffffff, 0);
+	vector<uint32_t> pair_counts(0x00ffffff, 0);
 
 	print_current_memory_usage("PCY_basic after counter allocation: ");
 
-	for(const auto& v : data) {
-		for(const auto& i : v) {
+	for(unsigned k = 0; k < data.size()*file_percentage; ++k) {
+		for(const auto& i : data[k]) {
 			++item_counts[i];
 		}
-		for(unsigned i = 0; i < v.size(); ++i) {
-			for(unsigned j = i + 1; j < v.size(); ++j) {
-				++pair_counts[hash1(v[i], v[j]) & pair_counts.size()];
+		for(unsigned i = 0; i < data[k].size(); ++i) {
+			for(unsigned j = i + 1; j < data[k].size(); ++j) {
+				++pair_counts[hash1(data[k][i], data[k][j]) & pair_counts.size()];
 			}
 		}
 	}
@@ -91,11 +91,11 @@ void PCY_basic(const vector<vector<uint16_t>>& data, double support_percentage, 
 
 	unordered_map<uint32_t, uint32_t> candidate_pairs;
 
-	for(const auto& v : data) {
-		for(unsigned i = 0; i < v.size() && frequent_items[v[i]]; ++i) {
-			for(unsigned j = i + 1; j < v.size(); ++j) {
-				if(frequent_items[v[j]] && frequent_pairs[hash1(v[i], v[j]) & frequent_pairs.size()]) {
-						candidate_pairs[pair_16s_to_32(v[i], v[j])] += 1;
+	for(unsigned k = 0; k < data.size()*file_percentage; ++k) {
+		for(unsigned i = 0; i < data[k].size() && frequent_items[data[k][i]]; ++i) {
+			for(unsigned j = i + 1; j < data[k].size(); ++j) {
+				if(frequent_items[data[k][j]] && frequent_pairs[hash1(data[k][i], data[k][j]) & frequent_pairs.size()]) {
+						candidate_pairs[pair_16s_to_32(data[k][i], data[k][j])] += 1;
 				}
 			}
 		}
