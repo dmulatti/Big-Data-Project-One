@@ -1,3 +1,4 @@
+#include<mach/mach.h>
 #include <chrono>
 #include <algorithm>
 #include <iostream>
@@ -10,6 +11,13 @@
 #include <unordered_set>
 
 using namespace std;
+
+void print_current_memory_usage(string s) {
+	struct task_basic_info t_info;
+	mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
+	task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t)&t_info, &t_info_count);
+	cout << "Memory usage at " << s << t_info.resident_size << endl;
+}
 
 uint32_t hash1(uint16_t first, uint16_t second) {
 	constexpr uint32_t FNV_prime = 16777619;
@@ -58,7 +66,9 @@ vector<bool> counts_to_frequent_bitmap(const vector<uint32_t>& counts, unsigned 
 
 void PCY_basic(const vector<vector<uint16_t>>& data, double support_percentage, double file_percentage) {
 	vector<uint32_t> item_counts(16500, 0);
-	vector<uint32_t> pair_counts(0x00ffffff, 0);
+	vector<uint32_t> pair_counts(0xffffffff, 0);
+
+	print_current_memory_usage("PCY_basic after counter allocation: ");
 
 	for(const auto& v : data) {
 		for(const auto& i : v) {
@@ -66,23 +76,25 @@ void PCY_basic(const vector<vector<uint16_t>>& data, double support_percentage, 
 		}
 		for(unsigned i = 0; i < v.size(); ++i) {
 			for(unsigned j = i + 1; j < v.size(); ++j) {
-				++pair_counts[hash1(v[i], v[j]) & 0x00ffffff];
+				++pair_counts[hash1(v[i], v[j]) & pair_counts.size()];
 			}
 		}
 	}
 
 	// The bool vector is implemented as a bitset
 	vector<bool> frequent_items = counts_to_frequent_bitmap(item_counts, (double)data.size()*support_percentage);
-	//item_counts.resize(0); // deallocations memory used by vector
+	item_counts.resize(0); // deallocations memory used by vector
 	vector<bool> frequent_pairs = counts_to_frequent_bitmap(pair_counts, (double)data.size()*support_percentage);
-	//pair_counts.resize(0);
+	pair_counts.resize(0);
+
+	print_current_memory_usage("PCY_basic after resizings: ");
 
 	unordered_map<uint32_t, uint32_t> candidate_pairs;
 
 	for(const auto& v : data) {
 		for(unsigned i = 0; i < v.size() && frequent_items[v[i]]; ++i) {
 			for(unsigned j = i + 1; j < v.size(); ++j) {
-				if(frequent_items[v[j]] && frequent_pairs[hash1(v[i], v[j]) & 0x00ffffff]) {
+				if(frequent_items[v[j]] && frequent_pairs[hash1(v[i], v[j]) & frequent_pairs.size()]) {
 						candidate_pairs[pair_16s_to_32(v[i], v[j])] += 1;
 				}
 			}
@@ -164,6 +176,8 @@ int64_t benchmark(void (*func)(const vector<vector<uint16_t>>&, double, double),
 
 int main(){
 	vector<vector<uint16_t>> data = read_baskets_from_file("retail.txt");
-	cout << benchmark(&PCY_basic, data, 0.01, 1) << endl;
-	cout << benchmark(&apriori, data, 0.01, 1) << endl;
+	cout << benchmark(&PCY_basic, data, 0.1, 1) << endl;
+	print_current_memory_usage("After PCY ");
+	cout << benchmark(&apriori, data, 0.1, 1) << endl;
+	print_current_memory_usage("After apriori ");
 }
