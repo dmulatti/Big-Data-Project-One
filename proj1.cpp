@@ -71,7 +71,7 @@ inline vector<bool> counts_to_frequent_bitmap(const vector<uint32_t> &counts, co
     return freq;
 }
 
-void PCY_basic(const vector<vector<uint16_t>> &data, const double support_percentage, const double file_percentage)
+vector<uint32_t> PCY_basic(const vector<vector<uint16_t>> &data, const double support_percentage, const double file_percentage)
 {
     vector<uint32_t> item_counts(16500, 0);
     vector<uint32_t> pair_counts(data.size() * file_percentage * 4, 0);
@@ -113,16 +113,19 @@ void PCY_basic(const vector<vector<uint16_t>> &data, const double support_percen
 		}
     }
 
+	vector<uint32_t> pairs;
     for (const auto &p : candidate_pairs)
     {
 		if ((double)p.second / data.size() >= support_percentage)
 		{
-			cout << (p.first >> 16) << ' ' << (p.first & 0xffff) << '\n';
+			pairs.push_back(p.first);
 		}
     }
+	pairs.shrink_to_fit();
+	return pairs;
 }
 
-void PCY_multihash(const vector<vector<uint16_t>> &data, const double support_percentage, const double file_percentage)
+vector<uint32_t> PCY_multihash(const vector<vector<uint16_t>> &data, const double support_percentage, const double file_percentage)
 {
     vector<uint32_t> item_counts(16500, 0);
     vector<uint32_t> pair_counts_1(data.size() * file_percentage * 2, 0);
@@ -170,16 +173,19 @@ void PCY_multihash(const vector<vector<uint16_t>> &data, const double support_pe
 		}
     }
 
+	vector<uint32_t> pairs;
     for (const auto &p : candidate_pairs)
     {
 		if ((double)p.second / data.size() >= support_percentage)
 		{
-			cout << (p.first >> 16) << ' ' << (p.first & 0xffff) << '\n';
+			pairs.push_back(p.first);
 		}
     }
+	pairs.shrink_to_fit();
+	return pairs;
 }
 
-void apriori(const vector<vector<uint16_t>> &data, const double support_percentage, const double file_percentage)
+vector<uint32_t> apriori(const vector<vector<uint16_t>> &data, const double support_percentage, const double file_percentage)
 {
     unsigned baskets_to_process = file_percentage * data.size();
     unsigned threshold = support_percentage * baskets_to_process;
@@ -221,11 +227,15 @@ void apriori(const vector<vector<uint16_t>> &data, const double support_percenta
 		}
     }
 
+	vector<uint32_t> pairs;
+
     for (auto const &pair : frequent_pairs)
     {
 		if (pair.second >= threshold)
-			cout << (pair.first >> 16) << ' ' << (pair.first & 0xffff) << '\n';
+			pairs.push_back(pair.first);
     }
+	pairs.shrink_to_fit();
+	return pairs;
 }
 
 vector<vector<uint16_t>> read_baskets_from_file(const string filename)
@@ -243,7 +253,7 @@ vector<vector<uint16_t>> read_baskets_from_file(const string filename)
     return data;
 }
 
-inline uint64_t benchmark(void (*func)(const vector<vector<uint16_t>> &, const double, const double),
+inline uint64_t benchmark(vector<uint32_t> (*func)(const vector<vector<uint16_t>> &, const double, const double),
 		  const vector<vector<uint16_t>> &data, const double support, const double file_percentage)
 {
     const auto start = chrono::high_resolution_clock::now();
