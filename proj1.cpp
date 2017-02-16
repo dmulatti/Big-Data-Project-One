@@ -74,7 +74,7 @@ inline vector<bool> counts_to_frequent_bitmap(const vector<uint32_t> &counts, co
 vector<uint32_t> PCY_basic(const vector<vector<uint16_t>> &data, const double support_percentage, const double file_percentage)
 {
     vector<uint32_t> item_counts(16500, 0);
-    vector<uint32_t> pair_counts(1000000000/2, 0);
+    vector<uint32_t> pair_counts(data.size()*file_percentage*4, 0);
 
     for (unsigned k = 0; k < data.size() * file_percentage; ++k)
     {
@@ -128,8 +128,8 @@ vector<uint32_t> PCY_basic(const vector<vector<uint16_t>> &data, const double su
 vector<uint32_t> PCY_multihash(const vector<vector<uint16_t>> &data, const double support_percentage, const double file_percentage)
 {
     vector<uint32_t> item_counts(16500, 0);
-    vector<uint32_t> pair_counts_1(1000000000/2, 0);
-	vector<uint32_t> pair_counts_2(1000000000/2, 0);
+    vector<uint32_t> pair_counts_1(data.size()*file_percentage*2, 0);
+	vector<uint32_t> pair_counts_2(data.size()*file_percentage*2, 0);
 
     for (unsigned k = 0; k < data.size() * file_percentage; ++k)
     {
@@ -259,7 +259,7 @@ inline uint64_t benchmark(vector<uint32_t> (*func)(const vector<vector<uint16_t>
     const auto start = chrono::high_resolution_clock::now();
     func(data, support, file_percentage);
     const auto end = chrono::high_resolution_clock::now();
-    return chrono::duration_cast<chrono::milliseconds>(end - start).count();
+    return chrono::duration_cast<chrono::nanoseconds>(end - start).count();
 }
 
 int main(int argc, char *argv[])
@@ -271,10 +271,22 @@ int main(int argc, char *argv[])
     }
     
 	vector<vector<uint16_t>> data = read_baskets_from_file(argv[1]);
-	double support_threshold = 0.05;
-	double file_percentage = 1;
 
-    cout << "PCY_basic: " << benchmark(&PCY_basic, data, support_threshold, file_percentage) << endl;
-    cout << "apriori: " << benchmark(&apriori, data, support_threshold, file_percentage) << endl;
-	cout << "PCY_multihash: " << benchmark(&PCY_multihash, data, support_threshold, file_percentage) << endl;
+	vector<double> supports = {0.01, 0.05, 0.1};
+	vector<double> filesize = {0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1};
+
+	for(const auto& support_threshold : supports) {
+		cout << support_threshold << "\n";
+		cout << "file_percentage,PCY_basic,PCY_multihash,apriori\n";
+		for(const auto& file_percentage : filesize) {
+			cout << file_percentage << ",";
+			cout << benchmark(&PCY_basic, data, support_threshold, file_percentage) << ",";
+			cout << benchmark(&PCY_multihash, data, support_threshold, file_percentage) << ",";
+			cout << benchmark(&apriori, data, support_threshold, file_percentage);
+			cout << "\n";
+		}
+		cout << endl;
+	}
+
+	return 0;
 }
