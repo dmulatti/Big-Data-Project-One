@@ -250,7 +250,8 @@ int main(int argc, char *argv[])
 {
     if (argc != 2)
     {
-		cout << "Usage: program [filename]\n";
+		cout << "Usage: " << argv[0] << " [filename]\n";
+		return 1;
     }
     vector<vector<uint16_t>> data = read_baskets_from_file(argv[1]);
     cout << benchmark(&PCY_basic, data, 0.1, 1) << endl;
