@@ -41,6 +41,10 @@ uint32_t hash2(uint16_t first, uint16_t second) {
 
 }
 
+uint32_t pair_16s_to_32(uint16_t a, uint16_t b) {
+	return ((uint32_t)a << 16) | b;
+}
+
 vector<bool> counts_to_frequent_bitmap(const vector<uint32_t>& counts, unsigned support_threshold) {
 	vector<bool> freq(counts.size(), false);
 	for(unsigned i = 0; i < counts.size(); ++i) {
@@ -78,7 +82,7 @@ void PCY_basic(const vector<vector<uint16_t>>& data, double support_percentage, 
 		for(unsigned i = 0; i < v.size() && frequent_items[v[i]]; ++i) {
 			for(unsigned j = i + 1; j < v.size(); ++j) {
 				if(frequent_items[v[j]] && frequent_pairs[hash1(v[i], v[j]) & 0x00ffffff]) {
-						candidate_pairs[(((uint32_t)v[i] << 16) | v[j])] += 1;
+						candidate_pairs[pair_16s_to_32(v[i], v[j])] += 1;
 				}
 			}
 		}
