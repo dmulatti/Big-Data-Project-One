@@ -74,7 +74,7 @@ inline vector<bool> counts_to_frequent_bitmap(const vector<uint32_t> &counts, co
 vector<uint32_t> PCY_basic(const vector<vector<uint16_t>> &data, const double support_percentage, const double file_percentage)
 {
     vector<uint32_t> item_counts(16500, 0);
-    vector<uint32_t> pair_counts(data.size()*file_percentage*4, 0);
+    vector<uint32_t> pair_counts(data.size()*file_percentage*5, 0);
 
     for (unsigned k = 0; k < data.size() * file_percentage; ++k)
     {
@@ -182,7 +182,7 @@ vector<uint32_t> PCY_multihash(const vector<vector<uint16_t>> &data, const doubl
 vector<uint32_t> PCY_multistage(const vector<vector<uint16_t>> &data, const double support_percentage, const double file_percentage)
 {
     vector<uint32_t> item_counts(16500, 0);
-    vector<uint32_t> pair_counts_1(data.size()*file_percentage*2, 0);
+    vector<uint32_t> pair_counts_1(data.size()*file_percentage*4, 0);
 
     for (unsigned k = 0; k < data.size() * file_percentage; ++k)
     {
@@ -202,7 +202,7 @@ vector<uint32_t> PCY_multistage(const vector<vector<uint16_t>> &data, const doub
     const vector<bool> frequent_pairs_1 = counts_to_frequent_bitmap(pair_counts_1, data.size() * support_percentage);
     pair_counts_1.resize(0);
 	
-	vector<uint32_t> pair_counts_2(data.size()*file_percentage*2, 0);
+	vector<uint32_t> pair_counts_2(data.size()*file_percentage*4, 0);
 	for (unsigned k = 0; k < data.size() * file_percentage; ++k)
     {
 		for (unsigned i = 0; i < data[k].size(); ++i)
