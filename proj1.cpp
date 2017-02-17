@@ -86,7 +86,7 @@ vector<uint32_t> PCY_basic(const vector<vector<uint16_t>> &data, const double su
 		{
 			for (unsigned j = i + 1; j < data[k].size(); ++j)
 			{
-				++pair_counts[hash1(data[k][i], data[k][j]) & pair_counts.size()];
+				++pair_counts[hash1(data[k][i], data[k][j]) % pair_counts.size()];
 			}
 		}
     }
@@ -105,7 +105,7 @@ vector<uint32_t> PCY_basic(const vector<vector<uint16_t>> &data, const double su
 		{
 			for (unsigned j = i + 1; j < data[k].size(); ++j)
 			{
-				if (frequent_items[data[k][j]] && frequent_pairs[hash1(data[k][i], data[k][j]) & frequent_pairs.size()])
+				if (frequent_items[data[k][j]] && frequent_pairs[hash1(data[k][i], data[k][j]) % frequent_pairs.size()])
 				{
 					candidate_pairs[pair_16s_to_32(data[k][i], data[k][j])] += 1;
 				}
@@ -190,7 +190,7 @@ vector<uint32_t> apriori(const vector<vector<uint16_t>> &data, const double supp
     unsigned baskets_to_process = file_percentage * data.size();
     unsigned threshold = support_percentage * baskets_to_process;
 
-    unordered_map<unsigned, unsigned> product_counts;
+    vector<uint32_t> product_counts(16500, 0);
 
     for (unsigned i = 0; i < baskets_to_process; ++i)
     {
@@ -200,26 +200,19 @@ vector<uint32_t> apriori(const vector<vector<uint16_t>> &data, const double supp
 		}
     }
 
-    unordered_set<unsigned> frequent_items;
-
-    for (auto const &count : product_counts)
-    {
-		if (count.second >= threshold)
-		{
-			frequent_items.insert(count.first);
-		}
-    }
+    vector<bool> frequent_items = counts_to_frequent_bitmap(product_counts, support_percentage);
+	product_counts.resize(0);
 
     unordered_map<uint32_t, uint32_t> frequent_pairs;
 
     for (unsigned i = 0; i < baskets_to_process; ++i)
     {
 		auto basket = data[i];
-		for (unsigned j = 0; frequent_items.count(basket[j]) && j < basket.size(); ++j)
+		for (unsigned j = 0; frequent_items[basket[j]] && j < basket.size(); ++j)
 		{
 			for (unsigned k = j + 1; k < basket.size(); ++k)
 			{
-				if (frequent_items.count(basket[k]))
+				if (frequent_items[basket[k]])
 				{
 					++frequent_pairs[(pair_16s_to_32(basket[j], basket[k]))];
 				}
@@ -234,6 +227,7 @@ vector<uint32_t> apriori(const vector<vector<uint16_t>> &data, const double supp
 		if (pair.second >= threshold)
 			pairs.push_back(pair.first);
     }
+	
 	pairs.shrink_to_fit();
 	return pairs;
 }
@@ -256,10 +250,10 @@ vector<vector<uint16_t>> read_baskets_from_file(const string filename)
 inline uint64_t benchmark(vector<uint32_t> (*func)(const vector<vector<uint16_t>> &, const double, const double),
 		  const vector<vector<uint16_t>> &data, const double support, const double file_percentage)
 {
-    const auto start = chrono::high_resolution_clock::now();
-    func(data, support, file_percentage);
-    const auto end = chrono::high_resolution_clock::now();
-    return chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+	const auto start = chrono::high_resolution_clock::now();
+	func(data, support, file_percentage);
+	const auto end = chrono::high_resolution_clock::now();
+	return chrono::duration_cast<chrono::nanoseconds>(end - start).count();
 }
 
 int main(int argc, char *argv[])
