@@ -190,7 +190,7 @@ vector<uint32_t> apriori(const vector<vector<uint16_t>> &data, const double supp
     unsigned baskets_to_process = file_percentage * data.size();
     unsigned threshold = support_percentage * baskets_to_process;
 
-    vector<uint32_t> product_counts(16500, 0);
+    unordered_map<unsigned, unsigned> product_counts;
 
     for (unsigned i = 0; i < baskets_to_process; ++i)
     {
@@ -200,19 +200,26 @@ vector<uint32_t> apriori(const vector<vector<uint16_t>> &data, const double supp
 		}
     }
 
-    vector<bool> frequent_items = counts_to_frequent_bitmap(product_counts, support_percentage);
-	product_counts.resize(0);
+    unordered_set<unsigned> frequent_items;
+
+    for (auto const &count : product_counts)
+    {
+		if (count.second >= threshold)
+		{
+			frequent_items.insert(count.first);
+		}
+    }
 
     unordered_map<uint32_t, uint32_t> frequent_pairs;
 
     for (unsigned i = 0; i < baskets_to_process; ++i)
     {
 		auto basket = data[i];
-		for (unsigned j = 0; frequent_items[basket[j]] && j < basket.size(); ++j)
+		for (unsigned j = 0; frequent_items.count(basket[j]) && j < basket.size(); ++j)
 		{
 			for (unsigned k = j + 1; k < basket.size(); ++k)
 			{
-				if (frequent_items[basket[k]])
+				if (frequent_items.count(basket[k]))
 				{
 					++frequent_pairs[(pair_16s_to_32(basket[j], basket[k]))];
 				}
