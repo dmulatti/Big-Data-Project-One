@@ -78,12 +78,9 @@ vector<uint32_t> PCY_basic(const vector<vector<uint16_t>> &data, const double su
 
     for (unsigned k = 0; k < data.size() * file_percentage; ++k)
     {
-		for (const auto &i : data[k])
-		{
-			++item_counts[i];
-		}
 		for (unsigned i = 0; i < data[k].size(); ++i)
 		{
+			++item_counts[i];
 			for (unsigned j = i + 1; j < data[k].size(); ++j)
 			{
 				++pair_counts[hash1(data[k][i], data[k][j]) % pair_counts.size()];
@@ -133,12 +130,9 @@ vector<uint32_t> PCY_multihash(const vector<vector<uint16_t>> &data, const doubl
 
     for (unsigned k = 0; k < data.size() * file_percentage; ++k)
     {
-		for (const auto &i : data[k])
-		{
-			++item_counts[i];
-		}
 		for (unsigned i = 0; i < data[k].size(); ++i)
 		{
+			++item_counts[i];
 			for (unsigned j = i + 1; j < data[k].size(); ++j)
 			{
 				++pair_counts_1[hash1(data[k][i], data[k][j]) % pair_counts_1.size()];
@@ -152,6 +146,73 @@ vector<uint32_t> PCY_multihash(const vector<vector<uint16_t>> &data, const doubl
     item_counts.resize(0); // deallocations memory used by vector
     const vector<bool> frequent_pairs_1 = counts_to_frequent_bitmap(pair_counts_1, data.size() * support_percentage);
     pair_counts_1.resize(0);
+	const vector<bool> frequent_pairs_2 = counts_to_frequent_bitmap(pair_counts_2, data.size() * support_percentage);
+    pair_counts_2.resize(0);
+
+    unordered_map<uint32_t, uint32_t> candidate_pairs;
+
+    for (unsigned k = 0; k < data.size() * file_percentage; ++k)
+    {
+		for (unsigned i = 0; i < data[k].size() && frequent_items[data[k][i]]; ++i)
+		{
+			for (unsigned j = i + 1; j < data[k].size(); ++j)
+			{
+				if (frequent_items[data[k][j]] 
+					&& frequent_pairs_1[hash1(data[k][i], data[k][j]) % frequent_pairs_1.size()] 
+					&& frequent_pairs_2[hash2(data[k][i], data[k][j]) % frequent_pairs_2.size()])
+				{
+					candidate_pairs[pair_16s_to_32(data[k][i], data[k][j])] += 1;
+				}
+			}
+		}
+    }
+
+	vector<uint32_t> pairs;
+    for (const auto &p : candidate_pairs)
+    {
+		if ((double)p.second / data.size() >= support_percentage)
+		{
+			pairs.push_back(p.first);
+		}
+    }
+	pairs.shrink_to_fit();
+	return pairs;
+}
+
+vector<uint32_t> PCY_multistage(const vector<vector<uint16_t>> &data, const double support_percentage, const double file_percentage)
+{
+    vector<uint32_t> item_counts(16500, 0);
+    vector<uint32_t> pair_counts_1(data.size()*file_percentage*2, 0);
+
+    for (unsigned k = 0; k < data.size() * file_percentage; ++k)
+    {
+		for (unsigned i = 0; i < data[k].size(); ++i)
+		{
+			++item_counts[i];
+			for (unsigned j = i + 1; j < data[k].size(); ++j)
+			{
+				++pair_counts_1[hash1(data[k][i], data[k][j]) % pair_counts_1.size()];
+			}
+		}
+    }
+
+    // The bool vector is implemented as a bitset
+    const vector<bool> frequent_items = counts_to_frequent_bitmap(item_counts, data.size() * support_percentage);
+    item_counts.resize(0); // deallocations memory used by vector
+    const vector<bool> frequent_pairs_1 = counts_to_frequent_bitmap(pair_counts_1, data.size() * support_percentage);
+    pair_counts_1.resize(0);
+	
+	vector<uint32_t> pair_counts_2(data.size()*file_percentage*2, 0);
+	for (unsigned k = 0; k < data.size() * file_percentage; ++k)
+    {
+		for (unsigned i = 0; i < data[k].size(); ++i)
+		{
+			for (unsigned j = i + 1; j < data[k].size(); ++j)
+			{
+				++pair_counts_2[hash2(data[k][i], data[k][j]) % pair_counts_2.size()];
+			}
+		}
+    }
 	const vector<bool> frequent_pairs_2 = counts_to_frequent_bitmap(pair_counts_2, data.size() * support_percentage);
     pair_counts_2.resize(0);
 
