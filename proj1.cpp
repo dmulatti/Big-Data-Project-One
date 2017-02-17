@@ -339,11 +339,12 @@ int main(int argc, char *argv[])
 
 	for(const auto& support_threshold : supports) {
 		cout << support_threshold << "\n";
-		cout << "file_percentage,PCY_basic,PCY_multihash,apriori\n";
+		cout << "file_percentage,PCY_basic,PCY_multihash,PCY_multistage,Apriori\n";
 		for(const auto& file_percentage : filesize) {
 			cout << file_percentage << ",";
 			cout << benchmark(&PCY_basic, data, support_threshold, file_percentage) << ",";
 			cout << benchmark(&PCY_multihash, data, support_threshold, file_percentage) << ",";
+			cout << benchmark(&PCY_multistage, data, support_threshold, file_percentage) << ",";
 			cout << benchmark(&apriori, data, support_threshold, file_percentage);
 			cout << "\n";
 		}
